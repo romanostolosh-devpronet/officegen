@@ -15,6 +15,8 @@ sheetTemplate  = require './templates/sheet.xml'
 stylesTemplate = require './templates/styles.xml'
 workBookTemplate = require './templates/workbook.xml'
 sharedStringsTemplate = require './templates/sharedStrings.xml'
+themeTemplate = require './templates/theme.xml'
+relationsTemplate = require './templates/relations.xml'
 
 class Xlsx
 
@@ -22,6 +24,23 @@ class Xlsx
   _.extend @prototype, ObservableMixin
 
   XMLDOCTYPE: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+
+  RELATIONS:
+    STYLES:
+      TYPE: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles"
+      TARGET: "styles.xml"
+
+    WORKSHEET:
+      TYPE: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"
+      TARGET: "worksheets/sheet1.xml"
+
+    THEME:
+      TYPE: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme"
+      TARGET: "theme/theme1.xml"
+
+    SHAREDSTRINGS:
+      TYPE: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings"
+      TARGET: "sharedStrings.xml"
 
   FONT_STYLES:
     'default': 0
@@ -77,7 +96,6 @@ class Xlsx
     result
 
   _generateRelations:->
-
 
   # Generates styles.xml
   # TODO: Remove result variable
@@ -206,19 +224,35 @@ class Xlsx
 
     result
 
+  _generateRelations:->
+    mustache.render(relationsTemplate,
+      xmlDocType: @XMLDOCTYPE
+    )
+
+  _generateTheme:->
+    mustache.render(themeTemplate,
+      xmlDocType: @XMLDOCTYPE
+    )
+
   generate:() ->
 
     # TODO: Temporary folders
     fs.mkdirSync "./tmp"       unless fs.existsSync "./tmp"
     fs.mkdirSync "./tmp/xl"    unless fs.existsSync "./tmp/xl"
+    fs.mkdirSync "./tmp/xl/theme" unless fs.existsSync "./tmp/xl/theme"
+    fs.mkdirSync "./tmp/xl/_rels" unless fs.existsSync "./tmp/xl/_rels"
+    fs.mkdirSync "./tmp/xl/worksheets" unless fs.existsSync "./tmp/xl/worksheets"
+
     fs.mkdirSync "./tmp/_rels" unless fs.existsSync "./tmp/_rels"
     fs.mkdirSync "./tmp/docProps" unless fs.existsSync "./tmp/docProps"
-    fs.mkdirSync "./tmp/xl/worksheets" unless fs.existsSync "./tmp/xl/worksheets"
 
     fs.writeFileSync "./tmp/docProps/app.xml", @_generateXlsApp()
     fs.writeFileSync "./tmp/xl/sharedStrings.xml", @_generateSharedStrings()
-    fs.writeFileSync "./tmp/xl/styles.xml",  @_generateXlsStyles()
+    fs.writeFileSync "./tmp/xl/styles.xml", @_generateXlsStyles()
     fs.writeFileSync "./tmp/xl/workbook.xml", @_generateXlsWorkbook()
+    fs.writeFileSync "./tmp/xl/theme/theme1.xml", @_generateTheme()
+    fs.writeFileSync "./tmp/xl/_rels/workbook.xml.rels", @_generateRelations()
+
 
     @_generateXlsSheets()
 
