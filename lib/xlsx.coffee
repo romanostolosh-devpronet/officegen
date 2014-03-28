@@ -137,88 +137,74 @@ class Xlsx
 
     @FONT_STYLES["default"]
 
-  _generateXlsSheet: (data) ->
-    maxX = 0
-    maxY = 0
-    curColMax = undefined
-    rowId = undefined
-    columnId = undefined
+  _generateXlsSheets: ->
+    @sheets.forEach (sheet, index)=>
+      fs.writeFileSync "./tmp/xl/worksheets/sheet#{index + 1}.xml", @_generateXlsSheet(sheet)
+      # TODO: Add creating relations
 
-    # Find the maximum cells area:
-    maxY = (if data.sheet.data.length then (data.sheet.data.length - 1) else 0)
-    rowId = 0
-    total_size_y = data.sheet.data.length
-
-    while rowId < total_size_y
-      if data.sheet.data[rowId]
-        curColMax = (if data.sheet.data[rowId].length then (data.sheet.data[rowId].length - 1) else 0)
-        maxX = (if maxX < curColMax then curColMax else maxX)
-      rowId++
-
+  _generateXlsSheet: (sheet) ->
+    xSize = 0
+    ySize = 0
     rows = []
 
-    rowId = 0
-    total_size_y = data.sheet.data.length
+    # Find the maximum cells area:
+    ySize = sheet.data.length - 1 if sheet.data.length
 
-    while rowId < total_size_y
+    sheet.data.forEach (row)->
+      currentColumnSize = row.length - 1 if row.length
+      xSize = Math.max currentColumnSize, xSize
 
-      if data.sheet.data[rowId]
-        rowLines = 1
-        data.sheet.data[rowId].forEach (cellData) ->
-          if typeof cellData is "string"
-            candidate = cellData.split("\n").length
-            rowLines = Math.max(rowLines, candidate)
-          return
+    sheet.data.forEach (row, rowIndex)=>
+      rowLines = 1
 
-        currentRow =
-          columns: []
-          rowId: rowId + 1
-          height: rowLines * 15
-          spansDimension: "1:" + data.sheet.data[rowId].length
+      currentRow =
+        columns: []
+        rowId: rowIndex + 1
+        height: rowLines * 15
+        spansDimension: "1:#{row.length}"
 
-        columnId = 0
-        total_size_x = data.sheet.data[rowId].length
+      row.forEach (column, columnIndex) =>
+        columnValue = @_getCellValue column
 
-        while columnId < total_size_x
-          cellData = getCellValue(data.sheet.data[rowId][columnId])
+        if typeof columnValue isnt "undefined"
+          value = undefined
+          type = @TYPES_CODES["default"]
 
-          if typeof cellData isnt "undefined"
-            value = undefined
-            type = TYPES_CODES["default"]
-            cellValueType = typeof cellData
-            type = TYPES_CODES[cellValueType]  if TYPES_CODES[cellValueType]
+          cellValueType = typeof columnValue
+          type = @TYPES_CODES[cellValueType] if @TYPES_CODES[cellValueType]
 
-            switch typeof cellData
+          switch typeof columnValue
 
-              when "number"
-                value = cellData
+            when "number"
+              value = columnValue
 
-              when "string"
-                value = genobj.generate_data.cell_strings[data.id][rowId][columnId]
+            when "string"
+              # Calculate row height
+              # depend on max lines in cell
+              # TODO: move height calculation to another method
+              candidate = columnValue.split("\n").length
+              rowLines = Math.max rowLines, candidate
+              currentRow.height = rowLines * 15
 
-            currentColumn =
-              cellName: Sheet::numberToCell(columnId) + (rowId + 1)
-              type: type
-              value: value
-              styleId: getCellStyleId(data.sheet.data[rowId][columnId])
+              value = @_sharedStrings.indexOf columnValue
 
-            currentRow.columns.push currentColumn
+          currentColumn =
+            cellName: "#{Sheet::numberToCell(columnIndex)}#{rowIndex + 1}"
+            type: type
+            value: value
+            styleId: @_getCellStyleId(columnValue)
 
-          columnId++
+          currentRow.columns.push currentColumn
 
         rows.push currentRow
 
-      rowId++
-
     result = mustache.render(sheetTemplate,
       xmlDocType: @XMLDOCTYPE
-      dimension: "A1:" + Sheet::numberToCell(maxX) + "" + (maxY + 1)
+      dimension: "A1:#{Sheet::numberToCell(xSize)}#{(ySize + 1)}"
       rows: rows
     )
 
     result
-
-    return
 
   generate:() ->
 
@@ -227,16 +213,17 @@ class Xlsx
     fs.mkdirSync "./tmp/xl"    unless fs.existsSync "./tmp/xl"
     fs.mkdirSync "./tmp/_rels" unless fs.existsSync "./tmp/_rels"
     fs.mkdirSync "./tmp/docProps" unless fs.existsSync "./tmp/docProps"
+    fs.mkdirSync "./tmp/xl/worksheets" unless fs.existsSync "./tmp/xl/worksheets"
 
     fs.writeFileSync "./tmp/docProps/app.xml", @_generateXlsApp()
     fs.writeFileSync "./tmp/xl/sharedStrings.xml", @_generateSharedStrings()
-    fs.writeFileSync "./tmp/xl/styles.xml", @_generateXlsStyles()
+    fs.writeFileSync "./tmp/xl/styles.xml",  @_generateXlsStyles()
     fs.writeFileSync "./tmp/xl/workbook.xml", @_generateXlsWorkbook()
+
+    @_generateXlsSheets()
 
     #TODO: Clarify how to generate this
     #gen_private.plugs.intAddAnyResourceToParse('xl\\_rels\\workbook.xml.rels', 'buffer', gen_private.type.msoffice.rels_app, gen_private.plugs.type.msoffice.cbMakeRels, true );
-
-    #gen_private.plugs.intAddAnyResourceToParse ( 'xl\\worksheets\\sheet' + (pageNumber + 1) + '.xml', 'buffer', gen_private.pages[pageNumber], cbMakeXlsSheet, false );
 
 
 module.exports = Xlsx
@@ -261,7 +248,7 @@ sheet.data[1][4] =
   value: "More"
   style: "bOld"
 
-sheet.data[1][5] = "Text"
+sheet.data[1][5] = "Text\n test"
 sheet.data[1][6] = "Here"
 sheet.data[2] = []
 sheet.data[2][5] = "abc"
@@ -310,7 +297,6 @@ sheet2.setCell "I2", 31.125
 sheet2.setCell "G102",
   value: "Hello World!"
   style: "bold"
-
 
 xlsxDocument.generate()
 
