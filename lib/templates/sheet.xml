@@ -17,11 +17,7 @@
         </row>
         {{/rows}}
     </sheetData>
-    <printOptions headings="false" gridLines="false" gridLinesSet="true" horizontalCentered="false" verticalCentered="false" />
-    <pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.511805555555555" footer="0.511805555555555" />
-    <pageSetup blackAndWhite="false" cellComments="none" copies="1" draft="false" firstPageNumber="0" fitToHeight="1" fitToWidth="1" horizontalDpi="300" orientation="portrait" pageOrder="downThenOver" paperSize="1" scale="100" useFirstPageNumber="false" usePrinterDefaults="false" verticalDpi="300" />
-    <headerFooter differentFirst="false" differentOddEven="false">
-        <oddHeader></oddHeader>
-        <oddFooter></oddFooter>
-    </headerFooter>
+    <pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.51180555555555496" footer="0.51180555555555496" />
+    <pageSetup paperSize="0" scale="0" firstPageNumber="0" orientation="portrait" usePrinterDefaults="0" horizontalDpi="0" verticalDpi="0" copies="0" />
+
 </worksheet>
